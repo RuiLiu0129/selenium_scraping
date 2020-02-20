@@ -11,3 +11,4 @@ local_tests/
 .idea
 chromedriver_mac64.zip
 scrape-linkedin-selenium
+scrape_linkedin/__pycache__
