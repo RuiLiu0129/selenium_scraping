@@ -7,3 +7,8 @@ README.md.*
 README.md.*
 local_tests/
 *.log
+.DS_Store
+.idea
+chromedriver_mac64.zip
+scrape-linkedin-selenium/
+scrape_linkedin/__pycache__
