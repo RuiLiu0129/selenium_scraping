@@ -64,7 +64,7 @@ class ConnectionScraper(Scraper):
         try:
             see_connections_link = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((
                 By.CSS_SELECTOR,
-                '.actor-name-with-distance search-result__title single-line-truncate ember-view'
+                '.pv-top-card-v2-section__link--connections'
             )))
         except TimeoutException as e:
             print("""Took too long to load connections link. This usually indicates you were trying to
@@ -79,21 +79,12 @@ scrape the connections of someone you aren't connected to.""")
         all_conns = []
 
     def next_page(self):
-        #self.driver.implicitly_wait(30)
-        # self.scroll_to_bottom()
-        link = self.driver.find_element_by_css_selector('button.artdeco-pagination__button--next')
-        link.click()
-        #self.driver.find_element_by_css_selector('button.artdeco-pagination__button--next').click()
-        # link.click()
-        # self.driver.implicitly_wait(20)
-        # self.find
-        #
-        self.wait(EC.text_to_be_present_in_element((By.CSS_SELECTOR, 'ul.search-results__list'),
-                                                   str(self.page_num + 1)))
+        next_btn = self.driver.find_element_by_css_selector('button.next')
+        next_btn.click()
+        self.wait(EC.text_to_be_present_in_element(
+            (By.CSS_SELECTOR, '.results-paginator li.page-list li.active'), str(self.page_num + 1)
+        ))
         self.page_num += 1
-
-
-
 
     def scrape_all_pages(self):
         self.page_num = 1
@@ -101,32 +92,21 @@ scrape the connections of someone you aren't connected to.""")
         more_pages = True
         while more_pages:
             more_pages, page_results = self.scrape_page()
-
             all_results += page_results
             if more_pages:
                 self.next_page()
         return all_results
 
-
     def scrape_page(self):
         print("SCRAPING PAGE: ", self.page_num)
         self.scroll_to_bottom()
-        if self.page_num < 7:
-            try:
-                next_btn = self.driver.find_element_by_css_selector('button.artdeco-pagination__button--next')
-            except:
-                next_btn = None
-        else:
+        try:
+            next_btn = self.driver.find_element_by_css_selector('button.next')
+        except NoSuchElementException:
             next_btn = None
-
-        connections = self.driver.find_elements_by_css_selector('.search-entity')
+        connections = self.driver.find_elements_by_css_selector(
+            '.search-entity')
         results = []
-
-        # if len(connections) < 10:
-        #     next_btn = None
-        # else:
-        #     next_btn = True
-
         for conn in connections:
             result = {}
             result['name'] = conn.find_element_by_css_selector(
@@ -137,7 +117,6 @@ scrape the connections of someone you aren't connected to.""")
             result['id'] = user_id
             results.append(result)
         return bool(next_btn), results
-
 
     def configure_connection_type(self):
         dropdown_btn = self.wait_for_el(

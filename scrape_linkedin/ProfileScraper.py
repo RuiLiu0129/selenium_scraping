@@ -16,6 +16,8 @@ class ProfileScraper(Scraper):
     Scraper for Personal LinkedIn Profiles. See inherited Scraper class for
     details about the constructor.
     """
+    MAIN_SELECTOR = '.core-rail'
+    ERROR_SELECTOR = '.profile-unavailable'
 
     def scrape_by_email(self, email):
         self.load_profile_page(
@@ -40,20 +42,14 @@ class ProfileScraper(Scraper):
             raise ValueError(
                 "Url must look like... .com/in/NAME or... '.com/sales/gmail/profile/proxy/EMAIL")
         self.driver.get(url)
-#        Wait for page to load dynamically via javascript
+        # Wait for page to load dynamically via javascript
         try:
-           myElem = WebDriverWait(self.driver, self.timeout).until(AnyEC(
-               EC.presence_of_element_located(
-                   (By.ID, 'profile-content')),
-               EC.presence_of_element_located(
-                   (By.CSS_SELECTOR, '.profile-unavailable'))
-           ))
-           #  myElem = WebDriverWait(self.driver, self.timeout).until(AnyEC(
-           #      EC.presence_of_element_located(
-           #          (By.CSS_SELECTOR, '.pv-top-card-section')),
-           #      EC.presence_of_element_located(
-           #          (By.CSS_SELECTOR, '.profile-unavailable'))
-           #  ))
+            myElem = WebDriverWait(self.driver, self.timeout).until(AnyEC(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, self.MAIN_SELECTOR)),
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, self.ERROR_SELECTOR))
+            ))
         except TimeoutException as e:
             raise ValueError(
                 """Took too long to load profile.  Common problems/solutions:
@@ -64,19 +60,19 @@ class ProfileScraper(Scraper):
                 3. Invalid e-mail address (or user does not allow e-mail scrapes) on scrape_by_email call
                 """)
 
-#        Check if we got the 'profile unavailable' page
-#         try:
-#             self.driver.find_element_by_css_selector('.pv-top-card-section')
-#         except:
-#             raise ValueError(
-#                 'Profile Unavailable: Profile link does not match any current Linkedin Profiles')
-#        Scroll to the bottom of the page incrementally to load any lazy-loaded content
+        # Check if we got the 'profile unavailable' page
+        try:
+            self.driver.find_element_by_css_selector(self.MAIN_SELECTOR)
+        except:
+            raise ValueError(
+                'Profile Unavailable: Profile link does not match any current Linkedin Profiles')
+        # Scroll to the bottom of the page incrementally to load any lazy-loaded content
         self.scroll_to_bottom()
 
     def get_profile(self):
         try:
-            profile = self.driver.find_element_by_id(
-                'profile-wrapper').get_attribute("outerHTML")
+            profile = self.driver.find_element_by_css_selector(
+                self.MAIN_SELECTOR).get_attribute("outerHTML")
         except:
             raise Exception(
                 "Could not find profile wrapper html. This sometimes happens for exceptionally long profiles.  Try decreasing scroll-increment.")
@@ -87,8 +83,8 @@ class ProfileScraper(Scraper):
         try:
             # Scroll to top to put clickable button in view
             self.driver.execute_script("window.scrollTo(0, 0);")
-            button = self.driver.find_element_by_link_text(
-                'See contact info')
+            button = self.driver.find_element_by_css_selector(
+                'a[data-control-name="contact_see_more"]')
             button.click()
             contact_info = self.wait_for_el('.pv-contact-info')
             return contact_info.get_attribute('outerHTML')
@@ -96,15 +92,14 @@ class ProfileScraper(Scraper):
             print(e)
             return ""
 
-    def get_mutual_connections(self, url='', user=None):
-        self.load_profile_page(url, user)
+    def get_mutual_connections(self):
         try:
             link = self.driver.find_element_by_partial_link_text(
-                'connections')
+                'Mutual Connection')
         except NoSuchElementException as e:
             print("NO MUTUAL CONNS")
             return []
         with ConnectionScraper(scraperInstance=self) as cs:
             cs.driver.get(link.get_attribute('href'))
-#            cs.wait_for_el('.search-s-facet--facetNetwork form button')
+            cs.wait_for_el('.search-s-facet--facetNetwork form button')
             return cs.scrape_all_pages()

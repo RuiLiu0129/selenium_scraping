@@ -22,7 +22,7 @@ class Scraper(object):
         - timeout {float}: time to wait for page to load first batch of async content
     """
 
-    def __init__(self, cookie=None, scraperInstance=None, driver=selenium.webdriver.Chrome, driver_options={}, scroll_pause=0.08, scroll_increment=200, timeout=40):
+    def __init__(self, cookie=None, scraperInstance=None, driver=selenium.webdriver.Chrome, driver_options={}, scroll_pause=0.1, scroll_increment=300, timeout=10):
         if type(self) is Scraper:
             raise Exception(
                 'Scraper is an abstract class and cannot be instantiated directly')
@@ -36,7 +36,8 @@ class Scraper(object):
             return
 
         self.was_passed_instance = False
-        self.driver = driver(**driver_options)
+        # self.driver = driver(**driver_options)
+        self.driver = driver(executable_path="scrape_linkedin/chromedriver")
         self.scroll_pause = scroll_pause
         self.scroll_increment = scroll_increment
         self.timeout = timeout
@@ -95,6 +96,11 @@ class Scraper(object):
                     self.driver.find_element_by_css_selector(name).click()
                 except:
                     pass
+
+            # Use JQuery to click on invisible expandable 'see more...' elements
+            self.driver.execute_script(
+                'document.querySelectorAll(".lt-line-clamp__ellipsis:not(.lt-line-clamp__ellipsis--dummy) .lt-line-clamp__more").forEach(el => el.click())')
+
             # Scroll down to bottom
             new_height = self.driver.execute_script(
                 "return Math.min({}, document.body.scrollHeight)".format(current_height + self.scroll_increment))
